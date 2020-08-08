@@ -33,14 +33,25 @@ createConnection()
       } catch (error) {}
     });
 
+    app.post(
+      "/login",
+      passport.authenticate("local", {
+        successRedirect: "/quiz",
+        failureRedirect: "/login",
+        failureFlash: false,
+      })
+    );
+
     app.post("/quiz", async (req: Request, res: Response) => {
       try {
-        const { title } = req.body;
+        console.log("REQUEST BODY: ", req.body);
+        const { quizTitle } = req.body;
         console.log("Inserting a new quiz into the database...");
         const quiz = new Quiz();
-        quiz.title = title;
-        await connection.manager.save(quiz);
+        quiz.title = quizTitle;
+        const savedQuiz = await connection.manager.save(quiz);
         console.log("Saved a new Quiz with id: " + quiz.id);
+        res.json(savedQuiz);
       } catch (error) {
         console.error(error.message);
       }
@@ -50,6 +61,7 @@ createConnection()
       try {
         const quizzes = await connection.manager.find(Quiz);
         console.log("Loaded quizzes: ", quizzes);
+        res.json(quizzes);
       } catch (error) {
         console.error(error.message);
       }
@@ -58,9 +70,10 @@ createConnection()
       try {
         const { id } = req.params;
         console.log("ID: ", id);
-        const quizRepo = getManager().getRepository(Quiz);
+        const quizRepo = await getManager().getRepository(Quiz);
         const quiz = await quizRepo.findOne(id);
         console.log("Loaded quiz: ", quiz);
+        res.json(quiz);
       } catch (error) {
         console.error(error.message);
       }
@@ -70,7 +83,11 @@ createConnection()
         const { id } = req.params;
         const { title } = req.body;
         const quizRepo = getManager().getRepository(Quiz);
-        quizRepo.update({ id: parseInt(id) }, { title: title.toString() });
+        await quizRepo.update(
+          { id: parseInt(id) },
+          { title: title.toString() }
+        );
+        res.json("quiz was updated!");
       } catch (error) {
         console.error(error.message);
       }
@@ -78,9 +95,11 @@ createConnection()
     app.delete("/quiz/:id", async (req: Request, res: Response) => {
       try {
         const { id } = req.params;
-        const { title } = req.body;
+        // const { title } = req.body;
         const quizRepo = getManager().getRepository(Quiz);
-        quizRepo.delete({ id: parseInt(id) });
+        await quizRepo.delete({ id: parseInt(id) });
+        console.log("Quiz Deleted");
+        res.json("quiz was deleted!");
       } catch (error) {
         console.error(error.message);
       }
@@ -104,7 +123,7 @@ createConnection()
       console.log("Inserting a new user into the database...");
       userArray.forEach(async (user) => {
         let hashedPassword = await bcrypt.hash(user.password, 10);
-        console.log(`User ${user.username} Password ${hashedPassword}`);
+        // console.log(`User ${user.username} Password ${hashedPassword}`);
         try {
           const databaseUser = new Users();
           databaseUser.username = user.username;
@@ -117,7 +136,7 @@ createConnection()
         }
 
         // console.log("Loading users from the database...");
-        const users = await connection.manager.find(Users);
+        // const users = await connection.manager.find(Users);
         // console.log("Loaded users: ", users);
 
         // bcrypt.compare("JuniperB3rri3s", hashedPassword, (err, result) => {
